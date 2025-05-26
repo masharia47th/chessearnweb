@@ -1,0 +1,15 @@
+Flask 
+Flask-RESTful
+Flask-SQLAlchemy 
+Flask-JWT-Extended 
+Flask-OAuthlib
+pyotp
+bcrypt
+Flask-Limiter
+psycopg2-binary
+python-dotenv
+Flask-Migrate
+phonenumbers
+email-validator
+python-magic
+flask-cors
