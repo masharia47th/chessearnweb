@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environment
+venv/
+env/
+.venv/
+ENV/
+*.venv/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Flask
+instance/
+*.log
+*.log.*
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+pgdata/
+*.dump
+
+# Migrations (optional: uncomment to ignore migration versions)
+# alembic/versions/
+
+# Dependency Caches
+.pip_cache/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+dist/
+build/
+wheels/
+
+# Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+.tox/
+.hypothesis/
+.junit/
+
+# Development Tools
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentation Build
+docs/_build/
+*.doctrees
+
+# Miscellaneous
+*.bak
+*.backup
+*.tmp
+temp/
+tmp/

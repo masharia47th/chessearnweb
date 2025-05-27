@@ -3,10 +3,12 @@ from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 
+
 class UserRole(Enum):
     ADMIN = "admin"
     PLAYER = "player"
     DEVELOPER = "developer"
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -18,7 +20,9 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     phone_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.Enum(UserRole, name="userrole"), default=UserRole.PLAYER, nullable=False)
+    role = db.Column(
+        db.Enum(UserRole, name="userrole"), default=UserRole.PLAYER, nullable=False
+    )
     ranking = db.Column(db.Integer, default=800)
     photo_filename = db.Column(db.String(255), nullable=False, default="default.jpg")
     wallet_balance = db.Column(db.Float, default=0.0)
@@ -63,7 +67,7 @@ class User(db.Model):
             "wallet_balance": self.wallet_balance,
             "is_active": self.is_active,
             "is_verified": self.is_verified,
-            "photo_filename": self.photo_filename
+            "photo_filename": self.photo_filename,
         }
 
     def __repr__(self):
