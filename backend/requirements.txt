@@ -1,10 +1,6 @@
-Flask 
-Flask-RESTful
-Flask-SQLAlchemy 
-Flask-JWT-Extended 
-Flask-OAuthlib
-pyotp
-bcrypt
+Flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
 Flask-Limiter
 psycopg2-binary
 python-dotenv
@@ -13,3 +9,6 @@ phonenumbers
 email-validator
 python-magic
 flask-cors
+python-chess
+Flask-SocketIO
+eventlet
