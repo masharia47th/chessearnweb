@@ -10,8 +10,14 @@ from app.services.game import (
 )
 from app.models.game import Game, GameStatus
 from app import db
+import chess
 
-socketio = SocketIO(cors_allowed_origins=["http://localhost:5173"])
+socketio = SocketIO(
+    cors_allowed_origins=[
+        "https://chessearn.com",
+        "http://41.90.179.124",  # Android emulator localhost alias
+    ]
+)
 
 
 def init_socketio(app):

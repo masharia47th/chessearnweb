@@ -6,7 +6,6 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 from config import Config
-from app.routes.socket import init_socketio
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -23,7 +22,12 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     limiter.init_app(app)
-    CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
+    CORS(
+        app,
+        origins=["https://chessearn.com", "http://41.90.179.124"],
+        supports_credentials=True,
+    )
+    from app.routes.socket import init_socketio
     init_socketio(app)
 
     # Register blueprints
