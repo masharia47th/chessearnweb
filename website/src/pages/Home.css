@@ -1,0 +1,150 @@
+.home-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+    padding: 2rem 1rem;
+    background: var(--primary-bg);
+    color: var(--text-main);
+  }
+  
+  .features-section,
+  .how-it-works-section,
+  .cta-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .features-section h2,
+  .how-it-works-section h2,
+  .cta-section h2 {
+    font-size: 2.2rem;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    letter-spacing: 1px;
+  }
+  
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+  }
+  
+  .feature-card {
+    background: var(--secondary-bg);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(44, 83, 100, 0.2);
+  }
+  
+  .feature-card h3 {
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+  
+  .feature-card p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+  }
+  
+  .feature-cta {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #222;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
+    border-radius: 100px;
+    text-decoration: none;
+    transition: background 0.3s, transform 0.15s;
+  }
+  
+  .feature-cta:hover {
+    background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 100%);
+    transform: scale(1.05);
+  }
+  
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .step {
+    position: relative;
+    padding: 1rem;
+  }
+  
+  .step-number {
+    display: inline-block;
+    width: 2.5rem;
+    height: 2.5rem;
+    line-height: 2.5rem;
+    text-align: center;
+    background: var(--accent);
+    color: var(--text-main);
+    border-radius: 50%;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+  
+  .step h3 {
+    font-size: 1.3rem;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+  }
+  
+  .step p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+  }
+  
+  .cta-section {
+    background: linear-gradient(120deg, var(--secondary-bg) 0%, var(--primary-bg) 100%);
+    padding: 3rem 2rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  
+  .cta-section p {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+  }
+  
+  @media (max-width: 768px) {
+    .home-container {
+      padding: 1rem;
+      gap: 2rem;
+    }
+  
+    .features-section h2,
+    .how-it-works-section h2,
+    .cta-section h2 {
+      font-size: 1.8rem;
+    }
+  
+    .feature-card,
+    .step {
+      padding: 1rem;
+    }
+  
+    .feature-cta {
+      padding: 0.7rem 1.2rem;
+      font-size: 0.9rem;
+    }
+  
+    .cta-section {
+      padding: 2rem 1rem;
+    }
+  }

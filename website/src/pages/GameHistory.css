@@ -1,0 +1,125 @@
+.game-history-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--primary-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .game-history-container h2 {
+    font-size: 1.8rem;
+    color: var(--accent);
+    text-align: center;
+  }
+  
+  .game-history-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .game-history-filter label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+  }
+  
+  .game-history-filter input {
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--secondary-bg);
+    color: var(--text-main);
+    transition: background 0.2s;
+  }
+  
+  .game-history-filter input:focus {
+    outline: none;
+    background: #3b6b82;
+  }
+  
+  .game-history-filter input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+  
+  .game-history-table {
+    overflow-x: auto;
+  }
+  
+  .game-history-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .game-history-table th,
+  .game-history-table td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--secondary-bg);
+    color: var(--text-secondary);
+  }
+  
+  .game-history-table th {
+    font-weight: bold;
+    color: var(--accent);
+  }
+  
+  .game-history-table td {
+    font-size: 0.9rem;
+  }
+  
+  .view-game-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-main);
+    background: var(--accent);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .view-game-button:hover {
+    background: var(--accent2);
+  }
+  
+  .game-history-message {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--accent2);
+  }
+  
+  .game-history-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .pagination-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-main);
+    background: var(--accent);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .pagination-button:hover:not(:disabled) {
+    background: var(--accent2);
+  }
+  
+  .pagination-button:disabled {
+    background: #555;
+    cursor: not-allowed;
+  }
