@@ -24,7 +24,7 @@ def create_app():
     limiter.init_app(app)
     CORS(
         app,
-        origins=["https://chessearn.com", "http://41.90.179.124"],
+        origins=["https://chessearn.com", "http://41.90.179.124","http://192.168.100.4:5173"],
         supports_credentials=True,
     )
     from app.routes.socket import init_socketio

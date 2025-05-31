@@ -1,4 +1,4 @@
-const BASE_URL = 'https://api.chessearn.com';
+const BASE_URL = 'http://192.168.100.4:4747';
 
 export async function createGame(authFetch, gameData) {
   const response = await authFetch(`${BASE_URL}/game/create`, {
