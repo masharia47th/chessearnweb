@@ -39,6 +39,25 @@ def join_match_route(game_id):
 
     return jsonify({"message": message, "game": game.to_dict()}), status
 
+@game_bp.route("/open", methods=["GET"])
+@limiter.limit("10 per minute")
+@jwt_required()
+def get_open_games_route():
+    from app.models.game import Game, GameStatus
+
+    open_games = Game.query.filter(
+        Game.status == GameStatus.PENDING,
+        Game.black_player_id == None  # Still waiting for opponent
+    ).all()
+
+    if not open_games:
+        return jsonify({"message": "No open games found", "games": []}), 200
+
+    return jsonify({
+        "message": f"{len(open_games)} open game(s) found",
+        "games": [game.to_dict() for game in open_games]
+    }), 200
+
 
 @game_bp.route("/history", methods=["GET"])
 @limiter.limit("10 per minute")

@@ -1,4 +1,4 @@
-const BASE_URL = 'https://api.chessearn.com';
+const BASE_URL = 'http://192.168.100.4:4747';
 
 // ==== AUTH ====
 

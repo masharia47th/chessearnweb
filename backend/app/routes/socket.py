@@ -15,7 +15,9 @@ import chess
 socketio = SocketIO(
     cors_allowed_origins=[
         "https://chessearn.com",
-        "http://41.90.179.124",  # Android emulator localhost alias
+        "http://41.90.179.124",
+        "http://192.168.100.4:5173", 
+         "ws://192.168.100.4:5173", # Android emulator localhost alias
     ]
 )
 
@@ -26,24 +28,27 @@ def init_socketio(app):
 
 @socketio.on("connect")
 def handle_connect(auth):
-    """
-    Handle WebSocket connection, authenticate with JWT.
-    """
+    print("Socket connected!")
     if not auth or "token" not in auth:
+        print("No auth token received!")
         return False
     try:
         decoded_token = decode_token(auth["token"])
         user_id = decoded_token["sub"]
+        print(f"Authenticated user: {user_id}")
         request.sid_user_id = user_id
-        # Join rooms for all active games the user is playing
+
         games = Game.query.filter(
             (Game.white_player_id == user_id) | (Game.black_player_id == user_id),
             Game.status == GameStatus.ACTIVE,
         ).all()
         for game in games:
             join_room(game.id)
-    except Exception:
+            print(f"Joined room for game {game.id}")
+    except Exception as e:
+        print(f"Socket auth failed: {e}")
         return False
+
 
 
 @socketio.on("disconnect")

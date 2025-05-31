@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 
 const GameContext = createContext();
 
-const BASE_WS_URL = 'wss://api.chessearn.com';
+const BASE_WS_URL = 'ws://192.168.100.4:4747';
 
 export function GameProvider({ children }) {
   const { accessToken, logout } = useAuth();
