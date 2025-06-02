@@ -7,24 +7,38 @@ from app.services.game import (
     offer_draw,
     accept_draw,
     decline_draw,
+    cancel_game,
 )
 from app.models.game import Game, GameStatus
 from app import db
 import chess
+from functools import wraps
+
+# Active user socket connections
+connected_users = {}
 
 socketio = SocketIO(
     cors_allowed_origins=[
         "https://chessearn.com",
         "http://41.90.179.124",
-        "http://192.168.100.4:5173", 
-         "ws://192.168.100.4:5173", # Android emulator localhost alias
+        "http://192.168.100.4:5173",
+        "ws://192.168.100.4:5173",
     ]
 )
-
 
 def init_socketio(app):
     socketio.init_app(app, async_mode="eventlet")
 
+# Auth middleware for socket events
+def authenticated_socket(f):
+    @wraps(f)
+    def wrapper(data):
+        user_id = connected_users.get(request.sid)
+        if not user_id:
+            emit("error", {"message": "Not authenticated"})
+            return
+        return f(user_id, data)
+    return wrapper
 
 @socketio.on("connect")
 def handle_connect(auth):
@@ -35,8 +49,8 @@ def handle_connect(auth):
     try:
         decoded_token = decode_token(auth["token"])
         user_id = decoded_token["sub"]
+        connected_users[request.sid] = user_id
         print(f"Authenticated user: {user_id}")
-        request.sid_user_id = user_id
 
         games = Game.query.filter(
             (Game.white_player_id == user_id) | (Game.black_player_id == user_id),
@@ -49,14 +63,9 @@ def handle_connect(auth):
         print(f"Socket auth failed: {e}")
         return False
 
-
-
 @socketio.on("disconnect")
 def handle_disconnect():
-    """
-    Handle WebSocket disconnection, leave game rooms.
-    """
-    user_id = getattr(request, "sid_user_id", None)
+    user_id = connected_users.pop(request.sid, None)
     if user_id:
         games = Game.query.filter(
             (Game.white_player_id == user_id) | (Game.black_player_id == user_id),
@@ -65,17 +74,9 @@ def handle_disconnect():
         for game in games:
             leave_room(game.id)
 
-
 @socketio.on("make_move")
-def handle_make_move(data):
-    """
-    Handle a move, update game state, and broadcast to players/spectators.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-
+@authenticated_socket
+def handle_make_move(user_id, data):
     game_id = data.get("game_id")
     move_san = data.get("move_san")
     move_time = data.get("move_time")
@@ -105,17 +106,9 @@ def handle_make_move(data):
             room=game_id,
         )
 
-
 @socketio.on("resign")
-def handle_resign(data):
-    """
-    Handle a player resigning the game.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-
+@authenticated_socket
+def handle_resign(user_id, data):
     game_id = data.get("game_id")
     if not game_id:
         emit("error", {"message": "Missing game_id"})
@@ -139,17 +132,25 @@ def handle_resign(data):
         room=game_id,
     )
 
-
-@socketio.on("offer_draw")
-def handle_offer_draw(data):
-    """
-    Handle a player offering a draw.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
+@socketio.on("cancel_game")
+@authenticated_socket
+def handle_cancel_game(user_id, data):
+    game_id = data.get("game_id")
+    if not game_id:
+        emit("error", {"message": "Missing game_id"})
         return
 
+    game, message, status = cancel_game(user_id, game_id)
+    if not game:
+        emit("error", {"message": message})
+        return
+
+    game_data = game.to_dict()
+    emit("game_cancelled", game_data, room=game_id)
+
+@socketio.on("offer_draw")
+@authenticated_socket
+def handle_offer_draw(user_id, data):
     game_id = data.get("game_id")
     if not game_id:
         emit("error", {"message": "Missing game_id"})
@@ -162,17 +163,9 @@ def handle_offer_draw(data):
 
     emit("draw_offered", {"game_id": game.id, "offered_by": user_id}, room=game_id)
 
-
 @socketio.on("accept_draw")
-def handle_accept_draw(data):
-    """
-    Handle a player accepting a draw offer.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-
+@authenticated_socket
+def handle_accept_draw(user_id, data):
     game_id = data.get("game_id")
     if not game_id:
         emit("error", {"message": "Missing game_id"})
@@ -196,17 +189,9 @@ def handle_accept_draw(data):
         room=game_id,
     )
 
-
 @socketio.on("decline_draw")
-def handle_decline_draw(data):
-    """
-    Handle a player declining a draw offer.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-
+@authenticated_socket
+def handle_decline_draw(user_id, data):
     game_id = data.get("game_id")
     if not game_id:
         emit("error", {"message": "Missing game_id"})
@@ -219,17 +204,9 @@ def handle_decline_draw(data):
 
     emit("draw_declined", {"game_id": game.id, "declined_by": user_id}, room=game_id)
 
-
 @socketio.on("spectate")
-def handle_spectate(data):
-    """
-    Allow a user to spectate a game.
-    """
-    user_id = getattr(request, "sid_user_id", None)
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-
+@authenticated_socket
+def handle_spectate(user_id, data):
     game_id = data.get("game_id")
     if not game_id:
         emit("error", {"message": "Missing game_id"})
@@ -246,8 +223,9 @@ def handle_spectate(data):
     join_room(game_id)
     # Send current game state to the spectator
     board = chess.Board()
-    for move in game.moves.split():
-        board.push_san(move)
+    if game.moves:
+        for move in game.moves.split():
+            board.push_san(move)
     game_data = game.to_dict()
     game_data["fen"] = board.fen()
     emit("game_update", game_data)

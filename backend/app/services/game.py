@@ -2,66 +2,40 @@ from app.models.game import Game, GameStatus, GameOutcome
 from app.models.user import User
 from app import db
 import chess
-from flask_jwt_extended import get_jwt_identity
 from datetime import datetime
+from app.utils.wallet import handle_wallet_bet, distribute_winnings, refund_bets
 
-
-def create_match(user_id, is_rated=True, opponent_id=None, base_time=300, increment=0):
-    """
-    Create a new chess match with time controls.
-    """
+def create_match(user_id, is_rated=True, base_time=300, increment=0, bet_amount=0.0):
     user = User.query.get(user_id)
     if not user:
         return None, "User not found", 404
-
     if base_time <= 0 or increment < 0:
         return None, "Invalid time controls", 400
+    if bet_amount < 0:
+        return None, "Bet amount cannot be negative", 400
+    if bet_amount > 0 and user.wallet_balance < bet_amount:
+        return None, "Insufficient balance to fund bet", 400
 
-    if opponent_id:
-        opponent = User.query.get(opponent_id)
-        if not opponent:
-            return None, "Opponent not found", 404
-        if opponent_id == user_id:
-            return None, "Cannot play against yourself", 400
+    # Deduct bet and lock as escrow
+    if bet_amount > 0:
+        handle_wallet_bet(user, bet_amount)
 
-        import random
-
-        if random.choice([True, False]):
-            white_player_id, black_player_id = user_id, opponent_id
-        else:
-            white_player_id, black_player_id = opponent_id, user_id
-
-        game = Game(
-            white_player_id=white_player_id,
-            black_player_id=black_player_id,
-            status=GameStatus.ACTIVE,
-            is_rated=is_rated,
-            base_time=base_time,
-            increment=increment,
-            white_time_remaining=float(base_time),
-            black_time_remaining=float(base_time),
-        )
-    else:
-        game = Game(
-            white_player_id=user_id,
-            black_player_id=None,
-            status=GameStatus.PENDING,
-            is_rated=is_rated,
-            base_time=base_time,
-            increment=increment,
-            white_time_remaining=float(base_time),
-            black_time_remaining=None,
-        )
-
+    game = Game(
+        white_player_id=user_id,
+        status=GameStatus.PENDING,
+        is_rated=is_rated,
+        base_time=base_time,
+        increment=increment,
+        white_time_remaining=float(base_time),
+        black_time_remaining=None,
+        bet_amount=bet_amount,
+        bet_locked=bool(bet_amount > 0),
+    )
     db.session.add(game)
     db.session.commit()
     return game, "Match created", 201
 
-
 def join_match(user_id, game_id):
-    """
-    Join an existing match as the black player, setting time controls.
-    """
     user = User.query.get(user_id)
     game = Game.query.get(game_id)
     if not user:
@@ -72,6 +46,13 @@ def join_match(user_id, game_id):
         return None, "Game is not open for joining", 400
     if game.white_player_id == user_id:
         return None, "Cannot join your own game", 400
+    if game.bet_amount > 0 and user.wallet_balance < game.bet_amount:
+        return None, "Insufficient balance to join bet", 400
+
+    # Deduct bet and lock as escrow
+    if game.bet_amount > 0:
+        handle_wallet_bet(user, game.bet_amount)
+        game.bet_locked = True
 
     game.black_player_id = user_id
     game.black_time_remaining = float(game.base_time)
@@ -79,11 +60,7 @@ def join_match(user_id, game_id):
     db.session.commit()
     return game, "Joined match", 200
 
-
 def make_move(user_id, game_id, move_san, move_time=None):
-    """
-    Make a move, update time controls, and check for time-outs.
-    """
     game = Game.query.get(game_id)
     if not game:
         return None, "Game not found", 404
@@ -94,86 +71,74 @@ def make_move(user_id, game_id, move_san, move_time=None):
 
     # Initialize chess board
     board = chess.Board()
-    for move in game.moves.split():
-        board.push_san(move)
+    if game.moves:
+        for move in game.moves.split():
+            board.push_san(move)
 
-    # Check if it's the user's turn
     is_white_turn = board.turn == chess.WHITE
     user_is_white = game.white_player_id == user_id
     if (is_white_turn and not user_is_white) or (not is_white_turn and user_is_white):
         return None, "Not your turn", 400
 
-    # Validate move
     try:
         move = board.parse_san(move_san)
         if move not in board.legal_moves:
             return None, "Invalid move", 400
         board.push(move)
-        game.moves = (game.moves + " " + move_san).strip()
+        game.moves = (game.moves + " " + move_san).strip() if game.moves else move_san
     except ValueError:
         return None, "Invalid move format", 400
 
-    # Update time controls
+    # Time controls
     current_time = move_time if move_time is not None else datetime.utcnow().timestamp()
-    if not game.moves:
-        game.start_time = datetime.fromtimestamp(current_time)
-
     last_time = (
         game.start_time.timestamp()
-        if not game.moves
-        else game.end_time.timestamp() if game.end_time else current_time
+        if game.start_time else current_time
     )
     time_used = current_time - last_time
 
     if user_is_white:
-        game.white_time_remaining = max(
-            0, game.white_time_remaining - time_used + game.increment
-        )
+        game.white_time_remaining = max(0, (game.white_time_remaining or game.base_time) - time_used + game.increment)
     else:
-        game.black_time_remaining = max(
-            0, game.black_time_remaining - time_used + game.increment
-        )
+        game.black_time_remaining = max(0, (game.black_time_remaining or game.base_time) - time_used + game.increment)
 
-    # Check for time-out
-    if game.white_time_remaining <= 0 and user_is_white:
+    # Start time on first move
+    if not game.start_time:
+        game.start_time = datetime.fromtimestamp(current_time)
+
+    # End game if timeout or checkmate
+    end = False
+    winner = None
+    if user_is_white and game.white_time_remaining <= 0:
+        end = True
         game.status = GameStatus.COMPLETED
         game.outcome = GameOutcome.BLACK_WIN
-        game.end_time = datetime.fromtimestamp(current_time)
-    elif game.black_time_remaining <= 0 and not user_is_white:
+        winner = "black"
+    elif not user_is_white and game.black_time_remaining <= 0:
+        end = True
         game.status = GameStatus.COMPLETED
         game.outcome = GameOutcome.WHITE_WIN
-        game.end_time = datetime.fromtimestamp(current_time)
-    else:
-        if board.is_game_over():
-            game.status = GameStatus.COMPLETED
-            game.end_time = game.end_time or datetime.fromtimestamp(current_time)
-            if board.is_checkmate():
-                game.outcome = (
-                    GameOutcome.WHITE_WIN
-                    if board.turn == chess.BLACK
-                    else GameOutcome.BLACK_WIN
-                )
-            elif (
-                board.is_stalemate()
-                or board.is_insufficient_material()
-                or board.is_seventyfive_moves()
-                or board.is_fivefold_repetition()
-            ):
-                game.outcome = GameOutcome.DRAW
+        winner = "white"
+    elif board.is_game_over():
+        end = True
+        game.status = GameStatus.COMPLETED
+        if board.is_checkmate():
+            game.outcome = (
+                GameOutcome.WHITE_WIN if board.turn == chess.BLACK else GameOutcome.BLACK_WIN
+            )
+            winner = "white" if board.turn == chess.BLACK else "black"
+        else:
+            game.outcome = GameOutcome.DRAW
 
-    game.end_time = (
-        datetime.fromtimestamp(current_time)
-        if game.status == GameStatus.COMPLETED
-        else datetime.fromtimestamp(current_time)
-    )
-    db.session.commit()
+    if end:
+        game.end_time = datetime.fromtimestamp(current_time)
+        db.session.commit()
+        distribute_winnings(game)
+    else:
+        db.session.commit()
     return game, board.fen(), 200
 
-
 def resign_game(user_id, game_id):
-    """
-    Allow a player to resign, ending the game.
-    """
     game = Game.query.get(game_id)
     if not game:
         return None, "Game not found", 404
@@ -190,13 +155,26 @@ def resign_game(user_id, game_id):
         game.outcome = GameOutcome.WHITE_WIN
 
     db.session.commit()
+    distribute_winnings(game)
     return game, "Game resigned", 200
 
+def cancel_game(user_id, game_id):
+    game = Game.query.get(game_id)
+    if not game:
+        return None, "Game not found", 404
+    if game.status not in [GameStatus.PENDING, GameStatus.ACTIVE]:
+        return None, "Game cannot be cancelled", 400
+    if user_id not in [game.white_player_id, game.black_player_id]:
+        return None, "Only a player can cancel", 403
+
+    game.status = GameStatus.CANCELLED
+    game.outcome = GameOutcome.CANCELLED
+    game.end_time = datetime.utcnow()
+    db.session.commit()
+    refund_bets(game)
+    return game, "Game cancelled and bets refunded", 200
 
 def offer_draw(user_id, game_id):
-    """
-    Allow a player to offer a draw.
-    """
     game = Game.query.get(game_id)
     if not game:
         return None, "Game not found", 404
@@ -211,11 +189,7 @@ def offer_draw(user_id, game_id):
     db.session.commit()
     return game, "Draw offered", 200
 
-
 def accept_draw(user_id, game_id):
-    """
-    Allow a player to accept a draw offer.
-    """
     game = Game.query.get(game_id)
     if not game:
         return None, "Game not found", 404
@@ -233,13 +207,10 @@ def accept_draw(user_id, game_id):
     game.draw_offered_by = None
     game.end_time = datetime.utcnow()
     db.session.commit()
+    distribute_winnings(game)
     return game, "Draw accepted", 200
 
-
 def decline_draw(user_id, game_id):
-    """
-    Allow a player to decline a draw offer.
-    """
     game = Game.query.get(game_id)
     if not game:
         return None, "Game not found", 404
@@ -256,12 +227,7 @@ def decline_draw(user_id, game_id):
     db.session.commit()
     return game, "Draw declined", 200
 
-
 def get_games(user_id=None, page=1, per_page=20, include_active=False):
-    """
-    Retrieve game history, optionally filtered by user_id, with pagination.
-    include_active: If True, include active games (for spectators).
-    """
     if user_id:
         user = User.query.get(user_id)
         if not user:
@@ -270,10 +236,7 @@ def get_games(user_id=None, page=1, per_page=20, include_active=False):
             (Game.white_player_id == user_id) | (Game.black_player_id == user_id)
         )
     else:
-        if include_active:
-            query = Game.query
-        else:
-            query = Game.query.filter(Game.status == GameStatus.COMPLETED)
+        query = Game.query if include_active else Game.query.filter(Game.status == GameStatus.COMPLETED)
 
     games = (
         query.order_by(Game.created_at.desc())
