@@ -4,11 +4,13 @@ from app.models.user import User
 from datetime import datetime
 import uuid
 
+
 class GameStatus(Enum):
     PENDING = "pending"
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"  # 🆕 Add: Allow for games cancelled before starting
+
 
 class GameOutcome(Enum):
     WHITE_WIN = "white_win"
@@ -17,6 +19,7 @@ class GameOutcome(Enum):
     INCOMPLETE = "incomplete"
     CANCELLED = "cancelled"  # 🆕 Add: For games that are cancelled
 
+
 class Game(db.Model):
     __tablename__ = "games"
 
@@ -24,9 +27,7 @@ class Game(db.Model):
     white_player_id = db.Column(
         db.String(36), db.ForeignKey("users.id"), nullable=False
     )
-    black_player_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=True
-    )
+    black_player_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True)
     status = db.Column(
         db.Enum(GameStatus, name="gamestatus"),
         default=GameStatus.PENDING,
@@ -50,10 +51,14 @@ class Game(db.Model):
 
     # Betting fields
     bet_amount = db.Column(db.Float, nullable=False, default=0.0)
-    bet_locked = db.Column(db.Boolean, default=False)  # 🆕 Add: True when both players' stakes are locked
+    bet_locked = db.Column(
+        db.Boolean, default=False
+    )  # 🆕 Add: True when both players' stakes are locked
 
     # 🆕 Platform fee for transparency and possible analytics
-    platform_fee = db.Column(db.Float, nullable=False, default=0.2)  # 20% by default (can be overridden in future)
+    platform_fee = db.Column(
+        db.Float, nullable=False, default=0.2
+    )  # 20% by default (can be overridden in future)
 
     # 🆕 Transaction IDs for traceability (optional, but useful)
     white_bet_txn_id = db.Column(db.String(36), nullable=True)

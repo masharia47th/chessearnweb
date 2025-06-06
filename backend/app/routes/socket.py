@@ -26,8 +26,10 @@ socketio = SocketIO(
     ]
 )
 
+
 def init_socketio(app):
     socketio.init_app(app, async_mode="eventlet")
+
 
 # Auth middleware for socket events
 def authenticated_socket(f):
@@ -38,7 +40,9 @@ def authenticated_socket(f):
             emit("error", {"message": "Not authenticated"})
             return
         return f(user_id, data)
+
     return wrapper
+
 
 @socketio.on("connect")
 def handle_connect(auth):
@@ -63,6 +67,7 @@ def handle_connect(auth):
         print(f"Socket auth failed: {e}")
         return False
 
+
 @socketio.on("disconnect")
 def handle_disconnect():
     user_id = connected_users.pop(request.sid, None)
@@ -73,6 +78,7 @@ def handle_disconnect():
         ).all()
         for game in games:
             leave_room(game.id)
+
 
 @socketio.on("make_move")
 @authenticated_socket
@@ -106,6 +112,7 @@ def handle_make_move(user_id, data):
             room=game_id,
         )
 
+
 @socketio.on("resign")
 @authenticated_socket
 def handle_resign(user_id, data):
@@ -132,6 +139,7 @@ def handle_resign(user_id, data):
         room=game_id,
     )
 
+
 @socketio.on("cancel_game")
 @authenticated_socket
 def handle_cancel_game(user_id, data):
@@ -148,6 +156,7 @@ def handle_cancel_game(user_id, data):
     game_data = game.to_dict()
     emit("game_cancelled", game_data, room=game_id)
 
+
 @socketio.on("offer_draw")
 @authenticated_socket
 def handle_offer_draw(user_id, data):
@@ -162,6 +171,7 @@ def handle_offer_draw(user_id, data):
         return
 
     emit("draw_offered", {"game_id": game.id, "offered_by": user_id}, room=game_id)
+
 
 @socketio.on("accept_draw")
 @authenticated_socket
@@ -189,6 +199,7 @@ def handle_accept_draw(user_id, data):
         room=game_id,
     )
 
+
 @socketio.on("decline_draw")
 @authenticated_socket
 def handle_decline_draw(user_id, data):
@@ -203,6 +214,7 @@ def handle_decline_draw(user_id, data):
         return
 
     emit("draw_declined", {"game_id": game.id, "declined_by": user_id}, room=game_id)
+
 
 @socketio.on("spectate")
 @authenticated_socket

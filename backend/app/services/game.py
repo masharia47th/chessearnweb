@@ -5,6 +5,7 @@ import chess
 from datetime import datetime
 from app.utils.wallet import handle_wallet_bet, distribute_winnings, refund_bets
 
+
 def create_match(user_id, is_rated=True, base_time=300, increment=0, bet_amount=0.0):
     user = User.query.get(user_id)
     if not user:
@@ -35,6 +36,7 @@ def create_match(user_id, is_rated=True, base_time=300, increment=0, bet_amount=
     db.session.commit()
     return game, "Match created", 201
 
+
 def join_match(user_id, game_id):
     user = User.query.get(user_id)
     game = Game.query.get(game_id)
@@ -59,6 +61,7 @@ def join_match(user_id, game_id):
     game.status = GameStatus.ACTIVE
     db.session.commit()
     return game, "Joined match", 200
+
 
 def make_move(user_id, game_id, move_san, move_time=None):
     game = Game.query.get(game_id)
@@ -91,16 +94,19 @@ def make_move(user_id, game_id, move_san, move_time=None):
 
     # Time controls
     current_time = move_time if move_time is not None else datetime.utcnow().timestamp()
-    last_time = (
-        game.start_time.timestamp()
-        if game.start_time else current_time
-    )
+    last_time = game.start_time.timestamp() if game.start_time else current_time
     time_used = current_time - last_time
 
     if user_is_white:
-        game.white_time_remaining = max(0, (game.white_time_remaining or game.base_time) - time_used + game.increment)
+        game.white_time_remaining = max(
+            0,
+            (game.white_time_remaining or game.base_time) - time_used + game.increment,
+        )
     else:
-        game.black_time_remaining = max(0, (game.black_time_remaining or game.base_time) - time_used + game.increment)
+        game.black_time_remaining = max(
+            0,
+            (game.black_time_remaining or game.base_time) - time_used + game.increment,
+        )
 
     # Start time on first move
     if not game.start_time:
@@ -124,7 +130,9 @@ def make_move(user_id, game_id, move_san, move_time=None):
         game.status = GameStatus.COMPLETED
         if board.is_checkmate():
             game.outcome = (
-                GameOutcome.WHITE_WIN if board.turn == chess.BLACK else GameOutcome.BLACK_WIN
+                GameOutcome.WHITE_WIN
+                if board.turn == chess.BLACK
+                else GameOutcome.BLACK_WIN
             )
             winner = "white" if board.turn == chess.BLACK else "black"
         else:
@@ -137,6 +145,7 @@ def make_move(user_id, game_id, move_san, move_time=None):
     else:
         db.session.commit()
     return game, board.fen(), 200
+
 
 def resign_game(user_id, game_id):
     game = Game.query.get(game_id)
@@ -158,6 +167,7 @@ def resign_game(user_id, game_id):
     distribute_winnings(game)
     return game, "Game resigned", 200
 
+
 def cancel_game(user_id, game_id):
     game = Game.query.get(game_id)
     if not game:
@@ -174,6 +184,7 @@ def cancel_game(user_id, game_id):
     refund_bets(game)
     return game, "Game cancelled and bets refunded", 200
 
+
 def offer_draw(user_id, game_id):
     game = Game.query.get(game_id)
     if not game:
@@ -188,6 +199,7 @@ def offer_draw(user_id, game_id):
     game.draw_offered_by = user_id
     db.session.commit()
     return game, "Draw offered", 200
+
 
 def accept_draw(user_id, game_id):
     game = Game.query.get(game_id)
@@ -210,6 +222,7 @@ def accept_draw(user_id, game_id):
     distribute_winnings(game)
     return game, "Draw accepted", 200
 
+
 def decline_draw(user_id, game_id):
     game = Game.query.get(game_id)
     if not game:
@@ -227,6 +240,7 @@ def decline_draw(user_id, game_id):
     db.session.commit()
     return game, "Draw declined", 200
 
+
 def get_games(user_id=None, page=1, per_page=20, include_active=False):
     if user_id:
         user = User.query.get(user_id)
@@ -236,7 +250,11 @@ def get_games(user_id=None, page=1, per_page=20, include_active=False):
             (Game.white_player_id == user_id) | (Game.black_player_id == user_id)
         )
     else:
-        query = Game.query if include_active else Game.query.filter(Game.status == GameStatus.COMPLETED)
+        query = (
+            Game.query
+            if include_active
+            else Game.query.filter(Game.status == GameStatus.COMPLETED)
+        )
 
     games = (
         query.order_by(Game.created_at.desc())

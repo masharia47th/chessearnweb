@@ -3,13 +3,21 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from app.services.game import (
-    create_match, join_match, get_games, make_move, resign_game, cancel_game,
-    offer_draw, accept_draw, decline_draw
+    create_match,
+    join_match,
+    get_games,
+    make_move,
+    resign_game,
+    cancel_game,
+    offer_draw,
+    accept_draw,
+    decline_draw,
 )
 from app.models.game import Game, GameStatus
 
 game_bp = Blueprint("game", __name__)
 limiter = Limiter(key_func=get_remote_address)
+
 
 @game_bp.route("/create", methods=["POST"])
 @limiter.limit("5 per minute")
@@ -30,6 +38,7 @@ def create_match_route():
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
 
+
 @game_bp.route("/join/<game_id>", methods=["POST"])
 @limiter.limit("5 per minute")
 @jwt_required()
@@ -39,6 +48,7 @@ def join_match_route(game_id):
     if not game:
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
+
 
 @game_bp.route("/move/<game_id>", methods=["POST"])
 @limiter.limit("20 per minute")
@@ -57,6 +67,7 @@ def make_move_route(game_id):
         return jsonify({"message": fen}), status
     return jsonify({"message": "Move made", "game": game.to_dict(), "fen": fen}), 200
 
+
 @game_bp.route("/resign/<game_id>", methods=["POST"])
 @limiter.limit("5 per minute")
 @jwt_required()
@@ -66,6 +77,7 @@ def resign_game_route(game_id):
     if not game:
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
+
 
 @game_bp.route("/cancel/<game_id>", methods=["POST"])
 @limiter.limit("5 per minute")
@@ -77,6 +89,7 @@ def cancel_game_route(game_id):
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
 
+
 @game_bp.route("/draw/offer/<game_id>", methods=["POST"])
 @limiter.limit("10 per minute")
 @jwt_required()
@@ -86,6 +99,7 @@ def offer_draw_route(game_id):
     if not game:
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
+
 
 @game_bp.route("/draw/accept/<game_id>", methods=["POST"])
 @limiter.limit("10 per minute")
@@ -97,6 +111,7 @@ def accept_draw_route(game_id):
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
 
+
 @game_bp.route("/draw/decline/<game_id>", methods=["POST"])
 @limiter.limit("10 per minute")
 @jwt_required()
@@ -107,18 +122,28 @@ def decline_draw_route(game_id):
         return jsonify({"message": message}), status
     return jsonify({"message": message, "game": game.to_dict()}), status
 
+
 @game_bp.route("/open", methods=["GET"])
 @limiter.limit("10 per minute")
 @jwt_required()
 def get_open_games_route():
     open_games = Game.query.filter(
-        Game.status == GameStatus.PENDING,
-        Game.black_player_id == None
+        Game.status == GameStatus.PENDING, Game.black_player_id == None
     ).all()
-    return jsonify({
-        "message": f"{len(open_games)} open game(s) found" if open_games else "No open games found",
-        "games": [game.to_dict() for game in open_games]
-    }), 200
+    return (
+        jsonify(
+            {
+                "message": (
+                    f"{len(open_games)} open game(s) found"
+                    if open_games
+                    else "No open games found"
+                ),
+                "games": [game.to_dict() for game in open_games],
+            }
+        ),
+        200,
+    )
+
 
 @game_bp.route("/history", methods=["GET"])
 @limiter.limit("10 per minute")
@@ -132,6 +157,7 @@ def get_games_route():
         return jsonify({"message": message}), status
     return jsonify({"message": message, "games": games}), status
 
+
 @game_bp.route("/<game_id>", methods=["GET"])
 @limiter.limit("10 per minute")
 @jwt_required()
@@ -144,15 +170,21 @@ def get_game_route(game_id):
         return jsonify({"message": "Unauthorized to view this game"}), 403
     return jsonify({"message": "Game retrieved", "game": game.to_dict()}), 200
 
+
 @game_bp.route("/my_games", methods=["GET"])
 @jwt_required()
 def get_my_games_route():
     user_id = get_jwt_identity()
     games = Game.query.filter(
         ((Game.white_player_id == user_id) | (Game.black_player_id == user_id)),
-        Game.status.in_([GameStatus.PENDING, GameStatus.ACTIVE])
+        Game.status.in_([GameStatus.PENDING, GameStatus.ACTIVE]),
     ).all()
-    return jsonify({
-        "message": f"{len(games)} active or pending game(s) found",
-        "games": [game.to_dict() for game in games]
-    }), 200
+    return (
+        jsonify(
+            {
+                "message": f"{len(games)} active or pending game(s) found",
+                "games": [game.to_dict() for game in games],
+            }
+        ),
+        200,
+    )

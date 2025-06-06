@@ -12,3 +12,4 @@ flask-cors
 python-chess
 Flask-SocketIO
 eventlet
+requests

@@ -24,19 +24,26 @@ def create_app():
     limiter.init_app(app)
     CORS(
         app,
-        origins=["https://chessearn.com", "http://41.90.179.124","http://192.168.100.4:5173"],
+        origins=[
+            "https://chessearn.com",
+            "http://41.90.179.124",
+            "http://192.168.100.4:5173",
+        ],
         supports_credentials=True,
     )
     from app.routes.socket import init_socketio
+
     init_socketio(app)
 
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.profile import profile_bp
     from app.routes.game import game_bp
+    from app.routes.mpesa import mpesa_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(profile_bp, url_prefix="/profile")
     app.register_blueprint(game_bp, url_prefix="/game")
+    app.register_blueprint(mpesa_bp, url_prefix="/mpesa")
 
     return app
